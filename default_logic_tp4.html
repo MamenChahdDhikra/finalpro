@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <title>TP4 - Logique des defauts</title>
+  <style>
+    body { font-family: Segoe UI, Arial, sans-serif; margin: 20px; background: #f4f6f8; }
+    h1 { color: #1a365d; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .card h3 { margin-top: 0; color: #2c5282; }
+    ul { line-height: 1.6; }
+    .def { border-left: 4px solid #3182ce; padding-left: 10px; margin: 8px 0; }
+    .ext { border-left: 4px solid #38a169; padding-left: 10px; margin: 10px 0; }
+    .tag { display: inline-block; background: #bee3f8; padding: 2px 8px; border-radius: 4px; margin: 2px; font-size: 12px; }
+    .tag.neg { background: #fed7d7; }
+    select { padding: 8px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>TP4 - Logique des defauts</h1>
+  <p id="desc"></p>
+  <div class="grid">
+    <div class="card">
+      <h3>W — Faits certains</h3>
+      <ul id="wlist"></ul>
+    </div>
+    <div class="card">
+      <h3>D — Regles de defaut (12)</h3>
+      <div id="dlist"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px;">
+    <h3>Extensions calculees</h3>
+    <label>Choisir une extension : </label>
+    <select id="extsel"></select>
+    <div id="extdetail" style="margin-top:12px;"></div>
+  </div>
+<script>
+const data = {"theory_name": "Parc_robots_industriels", "description": "Six robots autonomes (r1..r6) operent dans une usine. W contient des faits certains ; D encode des regles par defaut (comportement habituel + exceptions).", "W": ["r1", "r2", "r3", "r4", "r5", "r6", "delivery", "zoneA", "(r1 -> delivery)", "(r2 -> patrol)", "(r3 -> inspect)", "(r4 -> delivery)", "(r5 -> patrol)", "(r6 -> inspect)", "battery_low", "(r3 -> battery_low)", "(r6 -> battery_low)", "~maintenance"], "defaults": [{"name": "d1", "sig": "d1: (r1 -> delivery) : ~maintenance / package", "pre": "(r1 -> delivery)", "just": ["~maintenance"], "conc": "package"}, {"name": "d2", "sig": "d2: (r4 -> delivery) : ~maintenance / package", "pre": "(r4 -> delivery)", "just": ["~maintenance"], "conc": "package"}, {"name": "d3", "sig": "d3: (r2 -> patrol) : ~blocked / camera", "pre": "(r2 -> patrol)", "just": ["~blocked"], "conc": "camera"}, {"name": "d5", "sig": "d5: (r5 -> patrol) : ~blocked / camera", "pre": "(r5 -> patrol)", "just": ["~blocked"], "conc": "camera"}, {"name": "d4", "sig": "d4: zoneA : ~maintenance / slow", "pre": "zoneA", "just": ["~maintenance"], "conc": "slow"}, {"name": "d6", "sig": "d6: T : battery_low / charging", "pre": "T", "just": ["battery_low"], "conc": "charging"}, {"name": "d7", "sig": "d7: battery_low : ~charging / alert", "pre": "battery_low", "just": ["~charging"], "conc": "alert"}, {"name": "d8", "sig": "d8: (r3 -> inspect) : ~package / camera", "pre": "(r3 -> inspect)", "just": ["~package"], "conc": "camera"}, {"name": "d9", "sig": "d9: (r6 -> inspect) : ~package / camera", "pre": "(r6 -> inspect)", "just": ["~package"], "conc": "camera"}, {"name": "d10", "sig": "d10: priority_route : ~slow / alert", "pre": "priority_route", "just": ["~slow"], "conc": "alert"}, {"name": "d11", "sig": "d11: T : ~alert / priority_route", "pre": "T", "just": ["~alert"], "conc": "priority_route"}, {"name": "d12", "sig": "d12: slow : ~priority_route / blocked", "pre": "slow", "just": ["~priority_route"], "conc": "blocked"}], "extensions": [{"id": 1, "applied": [0, 1, 2, 3, 4, 5, 10], "positive": ["battery_low", "camera", "charging", "delivery", "inspect", "package", "patrol", "priority_route", "r1", "r2", "r3", "r4", "r5", "r6", "slow", "zoneA"], "negative": ["alert", "blocked", "maintenance"]}, {"id": 2, "applied": [0, 1, 2, 3, 4, 6], "positive": ["alert", "battery_low", "camera", "delivery", "inspect", "package", "patrol", "r1", "r2", "r3", "r4", "r5", "r6", "slow", "zoneA"], "negative": ["blocked", "charging", "maintenance"]}, {"id": 3, "applied": [0, 1, 4, 5, 11], "positive": ["battery_low", "blocked", "charging", "delivery", "inspect", "package", "patrol", "r1", "r2", "r3", "r4", "r5", "r6", "slow", "zoneA"], "negative": ["maintenance", "priority_route"]}, {"id": 4, "applied": [0, 1, 4, 6, 11], "positive": ["alert", "battery_low", "blocked", "delivery", "inspect", "package", "patrol", "r1", "r2", "r3", "r4", "r5", "r6", "slow", "zoneA"], "negative": ["charging", "maintenance", "priority_route"]}, {"id": 5, "applied": [2, 3, 4, 5, 7, 8, 10], "positive": ["battery_low", "camera", "charging", "delivery", "inspect", "patrol", "priority_route", "r1", "r2", "r3", "r4", "r5", "r6", "slow", "zoneA"], "negative": ["alert", "blocked", "maintenance", "package"]}, {"id": 6, "applied": [2, 3, 4, 6, 7, 8], "positive": ["alert", "battery_low", "camera", "delivery", "inspect", "patrol", "r1", "r2", "r3", "r4", "r5", "r6", "slow", "zoneA"], "negative": ["blocked", "charging", "maintenance", "package"]}, {"id": 7, "applied": [4, 5, 7, 8, 11], "positive": ["battery_low", "blocked", "camera", "charging", "delivery", "inspect", "patrol", "r1", "r2", "r3", "r4", "r5", "r6", "slow", "zoneA"], "negative": ["maintenance", "package", "priority_route"]}, {"id": 8, "applied": [4, 6, 7, 8, 11], "positive": ["alert", "battery_low", "blocked", "camera", "delivery", "inspect", "patrol", "r1", "r2", "r3", "r4", "r5", "r6", "slow", "zoneA"], "negative": ["charging", "maintenance", "package", "priority_route"]}]};
+document.getElementById('desc').textContent = data.description;
+const wul = document.getElementById('wlist');
+data.W.forEach(w => { const li = document.createElement('li'); li.textContent = w; wul.appendChild(li); });
+const dl = document.getElementById('dlist');
+data.defaults.forEach(d => {
+  const div = document.createElement('div');
+  div.className = 'def';
+  div.innerHTML = '<b>' + d.name + '</b><br/><code>' + d.sig + '</code>';
+  dl.appendChild(div);
+});
+const sel = document.getElementById('extsel');
+data.extensions.forEach(e => {
+  const o = document.createElement('option');
+  o.value = e.id;
+  o.textContent = 'Extension E' + e.id + ' (defauts: ' + (e.applied.join(', ') || 'aucun') + ')';
+  sel.appendChild(o);
+});
+function showExt() {
+  const id = parseInt(sel.value);
+  const e = data.extensions.find(x => x.id === id);
+  const box = document.getElementById('extdetail');
+  let html = '<div class="ext"><b>Defauts appliques :</b> ' + (e.applied.join(', ') || 'aucun') + '<br/>';
+  html += '<b>Positifs :</b> ';
+  e.positive.forEach(p => html += '<span class="tag">'+p+'</span>');
+  html += '<br/><b>Negatifs :</b> ';
+  e.negative.forEach(n => html += '<span class="tag neg">~'+n+'</span>');
+  html += '</div>';
+  box.innerHTML = html;
+}
+sel.addEventListener('change', showExt);
+if (data.extensions.length) showExt();
+</script>
+</body>
+</html>

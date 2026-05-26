@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Modele modal M - Visualisation</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 16px; }
+    #wrap { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+    #panel { width: 340px; }
+    canvas { border: 1px solid #ddd; background: #fff; }
+    .btnrow { margin-top: 8px; }
+    button { padding: 8px 10px; margin-right: 8px; }
+    code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h2>Modele modal M = &lt;W, R, V&gt; (6 mondes)</h2>
+  <div id="wrap">
+    <div>
+      <canvas id="c" width="920" height="700"></canvas>
+    </div>
+    <div id="panel">
+      <div><b>Interaction</b></div>
+      <div style="margin-top:6px;">
+        Cliquez sur un noeud <code>w_i</code> pour mettre en evidence les fleches sortantes.
+      </div>
+      <div class="btnrow">
+        <button onclick="selectNode(null)">Reset</button>
+      </div>
+      <hr/>
+      <div><b>Etat courant</b></div>
+      <div id="info" style="margin-top:8px; line-height:1.5;">Aucun noeud selectionne.</div>
+    </div>
+  </div>
+
+<script>
+  const data = {"W": ["w1", "w2", "w3", "w4", "w5", "w6"], "R": {"w1": ["w1", "w2", "w3", "w4"], "w2": ["w2", "w3", "w5"], "w3": ["w1", "w4", "w6"], "w4": ["w4", "w5", "w6"], "w5": ["w2", "w5", "w6"], "w6": ["w3", "w4", "w6"]}, "V_by_world": {"w1": ["a", "f"], "w2": ["a", "m"], "w3": ["e", "f"], "w4": ["a", "m"], "w5": ["a", "e", "f"], "w6": ["e", "m"]}, "prop_display": {"f": "f", "m": "m", "a": "a", "e": "e"}};
+  const W = data.W;
+  const R = data.R;
+  const V_by_world = data.V_by_world;
+  const prop_display = data.prop_display;
+
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  const cx = 460, cy = 350, radius = 230;
+  const nodeR = 20;
+  let selected = null;
+
+  // positions autour d'un cercle
+  const pos = {};
+  for (let i = 0; i < W.length; i++) {
+    const angle = 2 * Math.PI * i / W.length - Math.PI/2;
+    pos[W[i]] = { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
+  }
+
+  function drawArrow(x1, y1, x2, y2, color, width=1) {
+    const head = 10;
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    const hx = x2 - head * Math.cos(angle);
+    const hy = y2 - head * Math.sin(angle);
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(hx + 4 * Math.cos(angle + Math.PI/2), hy + 4 * Math.sin(angle + Math.PI/2));
+    ctx.lineTo(hx + 4 * Math.cos(angle - Math.PI/2), hy + 4 * Math.sin(angle - Math.PI/2));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function propsText(w) {
+    const props = V_by_world[w] || [];
+    if (props.length === 0) return 'none';
+    return props.map(p => prop_display[p] || p).join(', ');
+  }
+
+  function setInfo() {
+    const el = document.getElementById('info');
+    if (!selected) {
+      el.innerHTML = 'Aucun noeud selectionne.';
+      return;
+    }
+    const succ = R[selected] || [];
+    el.innerHTML = `Selection : <b>${selected}</b><br/>
+      Successeurs accessibles : <b>${succ.join(', ')}</b><br/>
+      V(${
+        selected
+      }) = <b>${propsText(selected)}</b>`;
+  }
+
+  function clear() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function render() {
+    clear();
+
+    // Fleches
+    for (const src of W) {
+      const edges = R[src] || [];
+      for (const dst of edges) {
+        const a = pos[src];
+        const b = pos[dst];
+        // Decale debut/fin pour que l'arrow commence/termine sur le bord du cercle
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const len = Math.sqrt(dx*dx + dy*dy) || 1;
+        const sx = a.x + (dx/len) * nodeR;
+        const sy = a.y + (dy/len) * nodeR;
+        const ex = b.x - (dx/len) * nodeR;
+        const ey = b.y - (dy/len) * nodeR;
+
+        const active = (selected === null) ? false : (selected === src);
+        const color = active ? '#d33' : '#999';
+        const width = active ? 2.2 : 1;
+        drawArrow(sx, sy, ex, ey, color, width);
+      }
+    }
+
+    // Noeuds
+    for (const w of W) {
+      const p = pos[w];
+      const isSel = (selected === w);
+      ctx.fillStyle = isSel ? '#ffd37a' : '#cfe8ff';
+      ctx.strokeStyle = isSel ? '#b46a00' : '#1f66b2';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, nodeR, 0, 2*Math.PI);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#000';
+      ctx.font = '16px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(w, p.x, p.y);
+
+      // Texte valuation sous le noeud
+      ctx.font = '12px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('V: ' + propsText(w), p.x, p.y + nodeR + 8);
+    }
+
+    setInfo();
+  }
+
+  function selectNode(w) {
+    selected = w;
+    render();
+  }
+
+  // Detecter click sur un noeud
+  canvas.addEventListener('click', (ev) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = (ev.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (ev.clientY - rect.top) * (canvas.height / rect.height);
+    let best = null;
+    let bestDist = Infinity;
+    for (const w of W) {
+      const p = pos[w];
+      const dx = x - p.x;
+      const dy = y - p.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist <= nodeR + 6 && dist < bestDist) {
+        best = w;
+        bestDist = dist;
+      }
+    }
+    selectNode(best);
+  });
+
+  render();
+</script>
+</body>
+</html>
